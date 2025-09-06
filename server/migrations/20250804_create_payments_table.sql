@@ -1,0 +1,11 @@
+CREATE TABLE payments (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+  order_id VARCHAR(100) NOT NULL UNIQUE,
+  amount NUMERIC(10, 2) NOT NULL,
+  currency VARCHAR(3) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  method VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

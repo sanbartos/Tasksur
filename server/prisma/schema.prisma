@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "auth"]
+}
+
+model audit_log_entries {
+  id          Int      @id @default(autoincrement())
+  instance_id Int?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model auth_users {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String   @unique
+  is_sso_user           Boolean?
+  // otros campos...
+
+  @@schema("auth")
+}
+
+model categories {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  tasks       tasks[]
+
+  @@schema("public")
+}
+
+model flow_state {
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime?
+  auth_code   String?
+  user_id     String?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model identities {
+  id         Int      @id @default(autoincrement())
+  email      String?
+  user_id    String?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model instances {
+  id         Int      @id @default(autoincrement())
+  // otros campos...
+
+  @@schema("public")
+}
+
+model mfa_amr_claims {
+  id                  Int      @id @default(autoincrement())
+  session_id          Int?
+  authentication_method String?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model mfa_challenges {
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime?
+  factor_id   Int?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model mfa_factors {
+  id              Int      @id @default(autoincrement())
+  user_id         String?
+  last_challenged_at DateTime?
+  phone           String?
+  // otros campos...
+
+  @@schema("public")
+}
+
+model messages {
+  id         Int       @id @default(autoincrement())
+  task_id    Int
+  sender_id  String    @db.Uuid
+  content    String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  users users @relation("messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "messages_sender_id_users_id_fk")
+  tasks tasks @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "messages_task_id_tasks_id_fk")
+
+  @@index([task_id], map: "idx_messages_task_id")
+
+  @@schema("public")
+}
+
+model notifications {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  title      String
+  message    String
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user users @relation("notifications_sent", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model oauth_clients {
+  id          Int      @id @default(autoincrement())
+  client_id   String   @unique
+  client_name String?
+  client_uri  String?
+  logo_uri    String?
+  deleted_at  DateTime?
+
+  @@schema("public")
+}
+
+model offers {
+  id         Int       @id @default(autoincrement())
+  task_id    Int
+  tasker_id  String    @db.Uuid
+  amount     Decimal   @db.Decimal
+  message    String?
+  status     String?   @default("pending")
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @updatedAt @db.Timestamptz(6)
+
+  tasks tasks @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "offers_task_id_tasks_id_fk")
+  users users @relation(fields: [tasker_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "offers_tasker_id_users_id_fk")
+
+  @@index([tasker_id], map: "idx_offers_tasker_id")
+
+  @@schema("public")
+}
+
+model one_time_tokens {
+  id          Int      @id @default(autoincrement())
+  relates_to  String?
+  token_hash  String?
+  user_id     String?
+  token_type  String?
+
+  @@schema("public")
+}
+
+model profiles {
+  id      Int    @id @default(autoincrement())
+  user_id String @db.Uuid @unique
+
+  @@schema("public")
+}
+
+model refresh_tokens {
+  id         Int      @id @default(autoincrement())
+  instance_id Int?
+  user_id    String?
+  parent     Int?
+  session_id Int?
+  revoked    Boolean?
+  token      String   @unique
+  updated_at DateTime?
+
+  @@schema("public")
+}
+
+model reviews {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskid       Int
+  reviewerid   String    @db.Uuid
+  targetuserid String    @db.Uuid
+  rating       Int
+  comment      String?
+  createdat    DateTime? @default(now()) @db.Timestamptz(6)
+
+  task       tasks @relation(fields: [taskid], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reviewer   users @relation("reviews_revieweridTousers", fields: [reviewerid], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  targetUser users @relation("reviews_targetuseridTousers", fields: [targetuserid], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([reviewerid], map: "idx_reviews_reviewerid")
+  @@index([targetuserid], map: "idx_reviews_targetuserid")
+  @@index([taskid], map: "idx_reviews_taskid")
+
+  @@schema("public")
+}
+
+model saml_providers {
+  id          Int      @id @default(autoincrement())
+  entity_id   String   @unique
+  metadata_url String?
+  metadata_xml String?
+
+  @@schema("public")
+}
+
+model saml_relay_states {
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime?
+  for_email   String?
+  sso_provider_id Int?
+
+  @@schema("public")
+}
+
+model schema_migrations {
+  version String @id
+
+  @@schema("public")
+}
+
+model sessions {
+  id         Int      @id @default(autoincrement())
+  not_after  DateTime?
+  user_id    String?
+
+  @@schema("public")
+}
+
+model sso_domains {
+  id              Int      @id @default(autoincrement())
+  sso_provider_id Int?
+
+  @@schema("public")
+}
+
+model sso_providers {
+  id          Int      @id @default(autoincrement())
+  resource_id String?
+
+  @@schema("public")
+}
+
+model tasks {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  budget      Decimal?  @db.Decimal
+  currency    String?
+  location    String?
+  priority    String?
+  status      String?   @default("open")
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  due_date    DateTime? @db.Timestamptz(6)
+  client_id   String    @db.Uuid
+  category_id Int?
+
+  client   users       @relation("tasks_client_idTousers", fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_client_id_users_id_fk")
+  category categories? @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "tasks_category_id_categories_id_fk")
+  messages messages[]
+  offers   offers[]
+  reviews  reviews[]
+
+  @@index([category_id], map: "idx_tasks_category_id")
+  @@index([client_id], map: "idx_tasks_client_id")
+
+  @@schema("public")
+}
+
+model users {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name            String?
+  last_name             String?
+  email                 String    @unique(map: "idx_users_email")
+  role                  String?   @default("client")
+  profile_image_url     String?
+  created_at            DateTime? @default(now()) @db.Timestamptz(6)
+  bio                   String?
+  phone                 String?
+  location              String?
+  is_tasker             Boolean?  @default(false)
+  rating                Decimal?  @default(0) @db.Decimal
+  review_count          Int?      @default(0)
+  hourly_rate           Decimal?  @db.Decimal
+  total_earnings        Decimal?  @default(0) @db.Decimal
+  skills                Json?     @default("[]")
+  notification_settings Json?     @default("{\"push\": true, \"email\": true}")
+
+  messages            messages[]      @relation("messages_sender_idTousers")
+  notifications_sent  notifications[] @relation("notifications_sent")
+  offers              offers[]
+  reviews_as_reviewer reviews[]       @relation("reviews_revieweridTousers")
+  reviews_as_target   reviews[]       @relation("reviews_targetuseridTousers")
+  tasks               tasks[]         @relation("tasks_client_idTousers")
+
+  @@schema("public")
+}
